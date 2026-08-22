@@ -6,9 +6,14 @@ import { parseExpress } from '../src/express/parse.js';
 import { transpile, expansion } from '../src/express/transpile.js';
 import { brief } from '../src/render/gates.js';
 import { Session } from '../src/session.js';
-import { systemInstruction, functionDeclarations } from '../src/express/prompt.js';
+import { systemInstruction, functionDeclarations, describeComponent } from '../src/express/prompt.js';
 
-const catalog = JSON.parse(readFileSync(new URL('../catalog/travel.catalog.json', import.meta.url), 'utf8'));
+const load = (name) =>
+  JSON.parse(readFileSync(new URL(`../catalog/${name}`, import.meta.url), 'utf8'));
+
+const catalog = load('travel.catalog.json');
+const clinic = load('clinic.catalog.json');
+const index = load('index.json');
 
 const FLIGHTS = `heading Lisbon · Fri 14 – Sun 16
 cards pick_flight
@@ -303,4 +308,94 @@ test('the tool declarations advertise exactly the catalog keywords', () => {
   assert.deepEqual(fns.map((f) => f.name), ['render_surface', 'select_option']);
   assert.match(fns[0].description, /cards/);
   assert.deepEqual(fns[0].parameters.required, ['express']);
+});
+
+
+// ------------------------------------------------- the catalog IS the config
+
+test('every catalog in the index loads and its own examples parse', () => {
+  assert.ok(index.length >= 2, 'the picker needs something to pick between');
+  for (const { file, title } of index) {
+    const c = load(file);
+    assert.ok(c.title, `${file} has no title`);
+    assert.equal(typeof title, 'string');
+    for (const example of c.examples ?? []) {
+      const ir = parseExpress(example.express, c);
+      assert.deepEqual(ir.errors, [], `${file} example failed:\n${example.express}`);
+    }
+    // Every component's own example must parse under its own catalog too.
+    for (const [name, def] of Object.entries(c.components)) {
+      if (!def.express?.example) continue;
+      const ir = parseExpress(def.express.example, c);
+      assert.deepEqual(ir.errors, [], `${file} ${name} example failed:\n${def.express.example}`);
+    }
+  }
+});
+
+test('a second catalog brings its own keywords, fields and gates', () => {
+  // Nothing in src/ knows the word "slots" exists.
+  const ir = parseExpress('slots book_slot\n- Tue 14 Jan, 09:20 | Dr Adeyemi | in person', clinic);
+  assert.deepEqual(ir.errors, []);
+  const { components } = transpile(ir, clinic);
+  assert.equal(components.find((c) => c.id === 'book_slot').modality.stakes, 'confirm');
+
+  // …and travel's keywords are meaningless under it.
+  assert.match(parseExpress('cards pick_flight', clinic).errors[0].message, /not a component/);
+});
+
+test('swapping the catalog on a live Session swaps the whole grammar', () => {
+  const s = new Session({ catalog });
+  assert.equal(s.renderSurface(FLIGHTS).ok, true);
+
+  s.setCatalog(clinic);
+  assert.equal(s.surface, null, 'the old surface belonged to the old catalog');
+  assert.equal(s.renderSurface(FLIGHTS).ok, false);
+  assert.equal(s.renderSurface('slots book_slot\n- Tue, 09:20 | Dr Adeyemi | phone').ok, true);
+});
+
+// -------------------------------------------------------------- disclosure
+
+test('flat discloses every component\'s syntax up front', () => {
+  const text = systemInstruction(catalog, { disclosure: 'flat' });
+  assert.ok(text.includes('- title | detail | price | tag?'));
+  assert.ok(!text.includes('call describe'));
+  const [{ functionDeclarations: fns }] = functionDeclarations(catalog, { disclosure: 'flat' });
+  assert.deepEqual(fns.map((f) => f.name), ['render_surface', 'select_option']);
+});
+
+test('progressive discloses names only, and adds the tool to ask', () => {
+  const text = systemInstruction(catalog, { disclosure: 'progressive' });
+  for (const keyword of ['cards', 'seatmap', 'confirm', 'private']) {
+    assert.ok(text.includes(keyword), `progressive prompt lost "${keyword}"`);
+  }
+  // The names are there; the field lists are not.
+  assert.ok(!text.includes('- title | detail | price | tag?'));
+  assert.ok(!text.includes('seat | kind | fee?'));
+  assert.match(text, /call describe with its keyword/);
+
+  const [{ functionDeclarations: fns }] = functionDeclarations(catalog, { disclosure: 'progressive' });
+  assert.deepEqual(fns.map((f) => f.name), ['render_surface', 'select_option', 'describe']);
+  assert.match(fns[2].parameters.properties.keyword.description, /cards/);
+});
+
+test('describe returns the syntax the flat prompt would have carried', () => {
+  const out = describeComponent(catalog, 'cards');
+  assert.equal(out.ok, true);
+  assert.equal(out.fields, 'title | detail | price | tag?');
+  assert.equal(out.itemsOnSeparateLines, true);
+  assert.match(out.example, /^cards pick_flight/m);
+  // And what it hands back must itself parse.
+  assert.deepEqual(parseExpress(out.example, catalog).errors, []);
+});
+
+test('describe on an unknown keyword lists the real ones', () => {
+  const out = describeComponent(catalog, 'carousel');
+  assert.equal(out.ok, false);
+  assert.ok(out.available.includes('cards'));
+});
+
+test('a Session dispatches describe like any other tool call', () => {
+  const s = new Session({ catalog });
+  assert.equal(s.call('describe', { keyword: 'confirm' }).ok, true);
+  assert.equal(s.call('describe', { keyword: 'nope' }).ok, false);
 });

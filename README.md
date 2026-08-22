@@ -22,6 +22,12 @@ Two demos, one code path:
 | `demo/live.html` | a real Gemini Live session. Bring your own Gemini API key. |
 | `demo/offline.html` | the same turn scripted. No key, no microphone. |
 
+There is no setup step in this API — no instance to create, nothing registered
+server-side. Configuration is one frame at the top of every socket, and it is
+immutable once sent. `demo/live.html` lets you choose the catalog that goes
+into it, switch how much of it is disclosed up front, and read the exact bytes
+before connecting. See [docs/DISCLOSURE.md](docs/DISCLOSURE.md).
+
 ---
 
 ## Why this exists
@@ -63,6 +69,10 @@ one edit. Remove it and every line naming it stops parsing. There is no second
 place to keep in sync, and no way to describe to the model a component the
 parser will not accept.
 
+`catalog/clinic.catalog.json` exists to be swapped in and prove that: different
+keywords, different fields, different gates, and nothing in `src/` knows it is
+there. Pick it in the demo and the agent becomes a receptionist.
+
 This is weaker than the guarantee in the sibling project, and worth being
 precise about. There, the catalog compiled into the model's structured-output
 schema, so an unapproved component was *ungeneratable*. The Live API has no
@@ -103,9 +113,12 @@ That is an instruction, not a veto, and instructions get ignored. See
 ## Running it
 
 ```sh
-node --test 'test/express.test.mjs'   # 35 tests, no network
-node --test 'test/browser.test.mjs'   # 9 tests, headless Chromium
+node --test 'test/express.test.mjs'   # 43 tests, no network
+node --test 'test/browser.test.mjs'   # 13 tests, headless Chromium
 GEMINI_API_KEY=… node --test 'test/live.test.mjs'   # 4 tests, real model
+
+node bench/frame-size.mjs                        # setup cost vs catalog size
+GEMINI_API_KEY=… node bench/disclosure.mjs       # flat vs progressive, live
 
 npx http-server . -p 8080             # then open /demo/offline.html
 ```
@@ -129,9 +142,21 @@ Verified against `models/gemini-3.1-flash-live-preview`:
   the model does overreach, it repairs inside the same turn
 - the briefing reaching the model before it speaks again
 
+Also verified live: the second catalog. Swapping to `clinic` produces slots,
+medications and consent — with the `confirm` gate asking for a yes and the
+`spokenSensitive` gate keeping the prescription list off the audio channel —
+without a line of code changing.
+
+And progressive disclosure: a model told only that a component named `cards`
+exists asks what it is, then writes correct Express first time, 5/5. It costs
+8 extra round trips and about a second per turn to save 15 bytes, which is why
+it is an option and not the default. Numbers in
+[docs/DISCLOSURE.md](docs/DISCLOSURE.md).
+
 Verified in headless Chromium against the scripted demo: the module graph, the
-rendered surface, a card that can actually be clicked, and a tapped pick and a
-spoken pick producing byte-identical actions.
+rendered surface, a card that can actually be clicked, a tapped pick and a
+spoken pick producing byte-identical actions, and the setup inspector showing
+a frame that changes with the catalog and the disclosure mode.
 
 **Not verified:** a full-duplex session from a browser with a real microphone.
 This was built in a sandbox whose browser has no audio devices and no route to

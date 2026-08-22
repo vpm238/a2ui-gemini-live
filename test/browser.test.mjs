@@ -207,3 +207,71 @@ test('the key is kept in this browser and Forget removes it', async () => {
   assert.equal(await page.inputValue('#key'), '');
   await page.close();
 });
+
+
+// ------------------------------------------------------------------- setup
+
+test('the setup pane says what the next connect will cost', async () => {
+  const { page, problems } = await open('/demo/live.html');
+  const summary = await page.textContent('#setupSummary');
+  assert.match(summary, /Travel concierge/);
+  assert.match(summary, /6 components/);
+  assert.match(summary, /flat/);
+  assert.match(summary, /\d+ B \(~\d+ tokens\) sent on every connect/);
+  assert.deepEqual(problems, []);
+  await page.close();
+});
+
+test('the Frame button shows the real setup frame without connecting', async () => {
+  const { page } = await open('/demo/live.html');
+  await page.click('#inspect');
+  const hop = page.locator('.hop-setup').first();
+  await hop.waitFor();
+
+  assert.match(await hop.textContent(), /not sent — inspection only/);
+  const frame = JSON.parse(await hop.locator('pre').textContent());
+  assert.ok(frame.setup.model.startsWith('models/'));
+  assert.deepEqual(frame.setup.generationConfig.responseModalities, ['AUDIO']);
+  assert.deepEqual(
+    frame.setup.tools[0].functionDeclarations.map((f) => f.name),
+    ['render_surface', 'select_option'],
+  );
+  assert.match(frame.setup.systemInstruction.parts[0].text, /- title \| detail \| price \| tag\?/);
+  assert.equal(await page.textContent('#state'), 'not connected');
+  await page.close();
+});
+
+test('choosing another catalog swaps the whole agent', async () => {
+  const { page, problems } = await open('/demo/live.html');
+
+  await page.selectOption('#catalog', 'clinic.catalog.json');
+  await page.waitForFunction(() =>
+    document.getElementById('setupSummary').textContent.includes('Clinic'));
+
+  await page.click('#inspect');
+  const text = await page.locator('.hop-setup pre').first().textContent();
+  assert.match(text, /slots <action>/);          // the clinic's keyword…
+  assert.doesNotMatch(text, /cards <action>/);   // …and not travel's
+  assert.match(text, /clinic receptionist/);
+  assert.deepEqual(problems, []);
+  await page.close();
+});
+
+test('progressive disclosure changes the frame and adds the describe tool', async () => {
+  const { page } = await open('/demo/live.html');
+
+  await page.selectOption('#disclosure', 'progressive');
+  await page.waitForFunction(() =>
+    document.getElementById('setupSummary').textContent.includes('progressive'));
+
+  await page.click('#inspect');
+  const frame = JSON.parse(await page.locator('.hop-setup pre').first().textContent());
+  assert.deepEqual(
+    frame.setup.tools[0].functionDeclarations.map((f) => f.name),
+    ['render_surface', 'select_option', 'describe'],
+  );
+  const prompt = frame.setup.systemInstruction.parts[0].text;
+  assert.match(prompt, /cards/);                              // the name survives
+  assert.doesNotMatch(prompt, /- title \| detail \| price/);  // the syntax does not
+  await page.close();
+});

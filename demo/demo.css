@@ -65,6 +65,19 @@ button { font: inherit; color: inherit; }
 .hint { margin: -8px 0 16px; font-size: 12px; line-height: 1.55; color: var(--ink-3); }
 .hint a { color: var(--voice); }
 
+.setup {
+  border: 1px solid var(--rule); border-radius: 10px;
+  padding: 12px 13px 4px; margin-bottom: 16px; background: var(--panel);
+}
+.setup h3 {
+  margin: 0 0 10px; font-family: var(--mono); font-size: 10.5px;
+  letter-spacing: 0.11em; text-transform: uppercase; color: var(--ink-3); font-weight: 500;
+}
+.setup .controls { margin-bottom: 8px; }
+.setup .hint { margin: 2px 0 10px; }
+select.field { cursor: pointer; }
+.file { cursor: pointer; white-space: nowrap; }
+
 .btn {
   border: 1px solid var(--rule); background: var(--panel-2);
   border-radius: 8px; padding: 8px 14px; cursor: pointer;
@@ -180,6 +193,9 @@ div.item { cursor: default; }
 .hop-brief > h3 { color: var(--good); }
 .hop-reject > h3 { color: var(--bad); }
 .hop-action > h3 { color: var(--good); }
+.hop-setup > h3 { color: var(--ink-2); }
+.hop-setup { border-color: var(--ink-3); }
+.hop-describe > h3 { color: var(--visual); }
 
 .hop pre {
   margin: 0; padding: 10px 11px; font-size: 11.5px; line-height: 1.5;

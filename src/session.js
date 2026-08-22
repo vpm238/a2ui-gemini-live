@@ -10,6 +10,7 @@
 
 import { parseExpress } from './express/parse.js';
 import { transpile, expansion } from './express/transpile.js';
+import { describeComponent } from './express/prompt.js';
 import { brief } from './render/gates.js';
 
 export class Session {
@@ -27,6 +28,29 @@ export class Session {
     this.onAction = onAction;
     this.onLog = onLog;
     this.surface = null;
+  }
+
+  /**
+   * Swap the catalog. Everything downstream reads `this.catalog` at call time,
+   * so this really is the whole change — different keywords, different fields,
+   * different gates, same code. Any surface already up belonged to the old
+   * catalog and is dropped rather than reinterpreted under the new one.
+   */
+  setCatalog(catalog) {
+    if (!catalog) throw new Error('setCatalog needs a catalog');
+    this.catalog = catalog;
+    this.surface = null;
+  }
+
+  /**
+   * `describe`. Only reachable in progressive disclosure, where the setup
+   * frame carries keywords but not syntax — this is how the model gets the
+   * rest, one component at a time, when it decides it needs it.
+   */
+  describe(keyword) {
+    const out = describeComponent(this.catalog, keyword);
+    this.onLog?.({ kind: 'describe', keyword, response: out });
+    return out;
   }
 
   /**
@@ -126,6 +150,7 @@ export class Session {
   call(name, args = {}) {
     if (name === 'render_surface') return this.renderSurface(args.express);
     if (name === 'select_option') return this.selectOption(args.action, args.index, 'voice');
+    if (name === 'describe') return this.describe(args.keyword);
     return { ok: false, errors: [`unknown tool "${name}"`] };
   }
 }

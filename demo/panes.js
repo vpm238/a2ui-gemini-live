@@ -44,6 +44,12 @@ export function mountPanes({ catalog, onTapNote }) {
           pre(entry.source),
           list(entry.errors.map((e) => `line ${e.line}: ${e.message}${e.hint ? ` — ${e.hint}` : ''}`)));
       }
+      if (entry.kind === 'describe') {
+        // Only ever seen under progressive disclosure: the model asking for
+        // syntax the setup frame deliberately did not carry.
+        hop('describe', 'describe · model → catalog', entry.keyword,
+          pre(JSON.stringify(entry.response, null, 2)));
+      }
     },
   });
 
@@ -107,7 +113,31 @@ export function mountPanes({ catalog, onTapNote }) {
       list(response.guidance), pre(JSON.stringify({ showing: response.showing }, null, 2)));
   }
 
-  return { session, visual, setState, warn, level, append, turn, hop, briefing };
+  /**
+   * The hop the wire pane was missing: the frame that configures the whole
+   * session. Everything else in this pane is downstream of it.
+   */
+  function setupFrame(frame, bytes, note = 'sent on connect') {
+    return hop('setup', 'setup · client → Gemini Live', note,
+      pre(JSON.stringify(frame, null, 2)),
+      node('div', { class: 'ratio' },
+        node('span', {}, 'frame'), node('b', {}, `${bytes} B`),
+        node('span', {}, `· ~${Math.round(bytes / 4)} tokens · every connect`)));
+  }
+
+  /** The whole configuration is this one object; swapping it swaps the agent. */
+  function setCatalog(next) {
+    session.setCatalog(next);
+    visual.catalog = next;
+    visual.clear();
+    ui.wire.replaceChildren();
+    ui.turns.replaceChildren();
+  }
+
+  return {
+    session, visual, setState, warn, level, append, turn, hop, briefing,
+    setupFrame, setCatalog,
+  };
 }
 
 export const pre = (text) => node('pre', {}, text);

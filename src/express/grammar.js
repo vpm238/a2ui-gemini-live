@@ -67,6 +67,8 @@ export function grammarOf(catalog) {
       /** How many of `fields` must be present. The rest may be omitted. */
       required: firstOptional === -1 ? declared.length : firstOptional,
       list: express.list === true,
+      /** A concrete line, shown by `describe` — worth more than a signature. */
+      example: express.example ?? null,
       description: def.description ?? '',
       speech: def.speech ?? {},
       modality: def.modality ?? {},

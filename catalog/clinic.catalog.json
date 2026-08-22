@@ -1,0 +1,88 @@
+{
+  "catalogId": "https://a2ui-gemini-live.dev/catalogs/clinic/v0.1/catalog.json",
+  "protocolVersion": "v1.0",
+  "title": "Clinic front desk",
+  "persona": "a clinic receptionist",
+  "description": "A second catalog, existing to be swapped in. Nothing in src/ knows this file exists: different keywords, different fields, different gates, same parser, same transpiler, same renderer. If the picker works, the argument that the catalog is the whole configuration holds; if something here needs a code change, it does not.",
+
+  "instructions": "You book appointments and answer questions about them. You are not a clinician: never interpret symptoms, never suggest a diagnosis, never advise on medication. If someone describes something urgent, say plainly that they should call 111, or 999 if it is an emergency, and do not render a surface for it.",
+
+  "components": {
+    "Column": {
+      "description": "Vertical stack. Every surface has exactly one Column with id 'root'.",
+      "express": null
+    },
+
+    "Heading": {
+      "description": "A short label above a list. Two or three words plus context. Never a sentence.",
+      "express": { "keyword": "heading", "head": ["text"], "example": "heading Dr Adeyemi · this week" },
+      "speech": { "announce": "{text}" }
+    },
+
+    "AppointmentSlots": {
+      "description": "Bookable times. Each slot shows when it is, who it is with, and whether it is in person or by phone.",
+      "express": {
+        "keyword": "slots",
+        "head": ["action"],
+        "list": true,
+        "fields": ["when", "clinician", "mode?"],
+        "example": "slots book_slot\n- Tue 14 Jan, 09:20 | Dr Adeyemi | in person"
+      },
+      "speech": { "item": "{when}, {clinician}" },
+      "modality": { "requiresVisual": false, "stakes": "confirm", "spokenSensitive": false }
+    },
+
+    "BodyMap": {
+      "description": "Where on the body something is. Speech cannot carry a location on a diagram, and an invented one would be acted on.",
+      "express": {
+        "keyword": "bodymap",
+        "head": ["action"],
+        "list": true,
+        "fields": ["region", "note?"],
+        "example": "bodymap mark_area\n- left shoulder | since Tuesday"
+      },
+      "modality": { "requiresVisual": true, "stakes": "none", "spokenSensitive": false }
+    },
+
+    "Medications": {
+      "description": "What the patient is currently prescribed. Shown in full on screen and never read aloud — someone else is usually in the room.",
+      "express": {
+        "keyword": "meds",
+        "head": [],
+        "list": true,
+        "fields": ["name", "dose", "note?"],
+        "example": "meds\n- Sertraline | 50 mg daily | review due March"
+      },
+      "modality": { "requiresVisual": false, "stakes": "none", "spokenSensitive": true }
+    },
+
+    "ConsentConfirm": {
+      "description": "A procedure the patient has to agree to. Irreversible in the sense that matters: it goes in their record.",
+      "express": {
+        "keyword": "consent",
+        "head": ["action"],
+        "fields": ["procedure", "clinician", "record"],
+        "example": "consent agree_bloods | Blood test · fasting | Nurse Patel | NHS 943 476 5919"
+      },
+      "speech": { "readback": "{procedure}, {clinician}" },
+      "modality": { "requiresVisual": false, "stakes": "readback", "spokenSensitive": false }
+    },
+
+    "Status": {
+      "description": "A live line that changes after you have stopped talking — 'slot held for 10 minutes'. Never use it to repeat something you already said.",
+      "express": { "keyword": "note", "head": ["text"], "example": "note Slot held for 10 minutes" },
+      "speech": { "announce": "{text}" }
+    }
+  },
+
+  "examples": [
+    {
+      "spoken": "Three left this week — the Tuesday one is in person, the others are phone.",
+      "express": "heading Dr Adeyemi · this week\nslots book_slot\n- Tue 14 Jan, 09:20 | Dr Adeyemi | in person\n- Wed 15 Jan, 16:40 | Dr Adeyemi | phone\n- Fri 17 Jan, 11:05 | Dr Okonjo | phone\nnote Slot held for 10 minutes"
+    },
+    {
+      "spoken": "Bloods with Nurse Patel, and you'll need to fast beforehand. Say yes and I'll put it in.",
+      "express": "consent agree_bloods | Blood test · fasting from midnight | Nurse Patel | NHS 943 476 5919"
+    }
+  ]
+}

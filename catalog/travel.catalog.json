@@ -15,7 +15,8 @@
         "keyword": "heading",
         "head": [
           "text"
-        ]
+        ],
+        "example": "heading Lisbon · Fri 14 – Sun 16"
       },
       "speech": {
         "announce": "{text}"
@@ -34,7 +35,8 @@
           "detail",
           "price",
           "tag?"
-        ]
+        ],
+        "example": "cards pick_flight\n- TAP Air Portugal | 06:15–09:05 | EUR 189 | direct"
       },
       "speech": {
         "item": "{title}, {detail}, {price}"
@@ -57,7 +59,8 @@
           "seat",
           "kind",
           "fee?"
-        ]
+        ],
+        "example": "seatmap choose_seat\n- 14A | window | EUR 12"
       },
       "speech": {
         "item": "{seat}, {kind}"
@@ -79,7 +82,8 @@
           "summary",
           "amount",
           "method"
-        ]
+        ],
+        "example": "confirm pay_now | easyJet · Fri 11:40 to Lisbon | EUR 212.00 | Visa ending 4417"
       },
       "speech": {
         "readback": "{summary}, {amount}"
@@ -99,7 +103,8 @@
         "fields": [
           "label",
           "value"
-        ]
+        ],
+        "example": "private\n- Passport | PT 4417 8890"
       },
       "modality": {
         "requiresVisual": false,
@@ -113,7 +118,8 @@
         "keyword": "note",
         "head": [
           "text"
-        ]
+        ],
+        "example": "note Prices held for 20 minutes"
       },
       "speech": {
         "announce": "{text}"
@@ -129,5 +135,6 @@
       "spoken": "That's two hundred and twelve euros for the easyJet. Say confirm and I'll book it.",
       "express": "confirm pay_now | easyJet · Fri 11:40 to Lisbon | EUR 212.00 | Visa ending 4417"
     }
-  ]
+  ],
+  "persona": "a travel concierge"
 }

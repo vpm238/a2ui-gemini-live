@@ -55,6 +55,7 @@ export class GeminiLive {
     apiKey, catalog, session,
     model = LIVE_MODELS[0],
     voice = null,
+    disclosure = 'flat',
     WebSocketImpl = globalThis.WebSocket,
     socketOptions = undefined,
   }) {
@@ -63,7 +64,42 @@ export class GeminiLive {
     if (!session) throw new Error('GeminiLive needs a Session to answer tool calls');
     if (!WebSocketImpl) throw new Error('no WebSocket available — pass WebSocketImpl');
 
-    Object.assign(this, { apiKey, catalog, session, model, voice, WebSocketImpl, socketOptions });
+    Object.assign(this, {
+      apiKey, catalog, session, model, voice, disclosure, WebSocketImpl, socketOptions,
+    });
+  }
+
+  /**
+   * The whole configuration of a session, as one object.
+   *
+   * There is no setup step in this API and no instance to configure. This
+   * frame is the first thing on the socket, it is sent on every connect, and
+   * it is immutable once acknowledged — a second `setup` closes the connection
+   * with 1007. So everything the model will ever be able to do is here, or it
+   * does not exist.
+   *
+   * Exposed rather than buried inside connect() because the demo shows it: a
+   * reconstruction of this in the UI would eventually drift from what is
+   * actually sent, and that is exactly the thing worth being able to trust.
+   */
+  setupFrame() {
+    return {
+      setup: {
+        model: this.model,
+        generationConfig: {
+          responseModalities: ['AUDIO'],
+          ...(this.voice && {
+            speechConfig: { voiceConfig: { prebuiltVoiceConfig: { voiceName: this.voice } } },
+          }),
+        },
+        systemInstruction: {
+          parts: [{ text: systemInstruction(this.catalog, { disclosure: this.disclosure }) }],
+        },
+        tools: functionDeclarations(this.catalog, { disclosure: this.disclosure }),
+        inputAudioTranscription: {},
+        outputAudioTranscription: {},
+      },
+    };
   }
 
   on(event, fn) {
@@ -107,21 +143,9 @@ export class GeminiLive {
 
       ws.onopen = () => {
         this.#emit('open');
-        this.#send({
-          setup: {
-            model: this.model,
-            generationConfig: {
-              responseModalities: ['AUDIO'],
-              ...(this.voice && {
-                speechConfig: { voiceConfig: { prebuiltVoiceConfig: { voiceName: this.voice } } },
-              }),
-            },
-            systemInstruction: { parts: [{ text: systemInstruction(this.catalog) }] },
-            tools: functionDeclarations(this.catalog),
-            inputAudioTranscription: {},
-            outputAudioTranscription: {},
-          },
-        });
+        const frame = this.setupFrame();
+        this.#emit('setupSent', { frame, bytes: byteLength(JSON.stringify(frame)) });
+        this.#send(frame);
       };
 
       ws.onmessage = async (event) => {
@@ -222,6 +246,12 @@ export class GeminiLive {
     this.#ws = null;
     this.#ready = null;
   }
+}
+
+export function byteLength(text) {
+  return typeof Buffer !== 'undefined'
+    ? Buffer.byteLength(text)
+    : new TextEncoder().encode(text).length;
 }
 
 /** Frames arrive as string, Blob or ArrayBuffer depending on the runtime. */

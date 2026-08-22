@@ -1,0 +1,12 @@
+[
+  {
+    "file": "travel.catalog.json",
+    "title": "Travel concierge",
+    "blurb": "Flights, seats, payment. Exercises all three modality gates."
+  },
+  {
+    "file": "clinic.catalog.json",
+    "title": "Clinic front desk",
+    "blurb": "Different keywords, different fields, different gates. Nothing in src/ knows it exists."
+  }
+]

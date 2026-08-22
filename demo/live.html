@@ -26,6 +26,24 @@
       Google — this page has no server to send it to.
       <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener">Get one</a>.</p>
 
+    <div class="setup">
+      <h3>Setup</h3>
+      <div class="controls">
+        <select id="catalog" class="field" aria-label="Catalog"></select>
+        <label class="file btn" title="Load a .catalog.json from disk">
+          Load…<input id="upload" type="file" accept=".json,application/json" hidden>
+        </label>
+      </div>
+      <div class="controls">
+        <select id="disclosure" class="field" aria-label="Disclosure">
+          <option value="flat">flat — every component's syntax up front</option>
+          <option value="progressive">progressive — names up front, syntax on request</option>
+        </select>
+        <button id="inspect" class="btn" title="Show the exact frame sent on connect">Frame</button>
+      </div>
+      <p id="setupSummary" class="hint"></p>
+    </div>
+
     <div class="status">
       <span id="dot" class="dot"></span>
       <span id="state">not connected</span>
