@@ -19,7 +19,7 @@ Two demos, one code path:
 
 | | |
 |---|---|
-| `demo/live.html` | a real Gemini Live session. Needs a key, or a deployment that mints tokens. |
+| `demo/live.html` | a real Gemini Live session. Bring your own Gemini API key. |
 | `demo/offline.html` | the same turn scripted. No key, no microphone. |
 
 ---
@@ -104,7 +104,7 @@ That is an instruction, not a veto, and instructions get ignored. See
 
 ```sh
 node --test 'test/express.test.mjs'   # 35 tests, no network
-node --test 'test/browser.test.mjs'   # 8 tests, headless Chromium
+node --test 'test/browser.test.mjs'   # 9 tests, headless Chromium
 GEMINI_API_KEY=… node --test 'test/live.test.mjs'   # 4 tests, real model
 
 npx http-server . -p 8080             # then open /demo/offline.html
@@ -148,39 +148,38 @@ Pushing to `main` runs the tests and, if they pass, deploys the whole repo to
 Cloudflare Pages. There is no build step — the demos import `../src/*.js` as
 ES modules at runtime, so the deployed files *are* the source.
 
-Three secrets under **Settings → Secrets and variables → Actions**:
+Two secrets under **Settings → Secrets and variables → Actions**:
 
 | secret | |
 |---|---|
 | `CLOUDFLARE_API_TOKEN` | needs the **Cloudflare Pages: Edit** permission |
 | `CLOUDFLARE_ACCOUNT_ID` | right-hand sidebar of any Cloudflare dashboard page |
-| `GEMINI_API_KEY` | optional — see below |
 
-The workflow creates the Pages project if it does not exist, pushes
-`GEMINI_API_KEY` through to the Function as a Pages secret, and deploys.
-Rotating the key is one secret update and a re-run.
+The workflow creates the Pages project if it does not exist, then deploys.
+No Gemini credential is involved, because the deployment does not hold one.
 
-## The key, and why the deployed page does not hold one
+## The key
 
-Browsers cannot set headers on a WebSocket handshake, so the credential has to
-ride in the query string. Locally that is a key pasted into the page and kept
-in `localStorage` — fine for a demo, wrong for anything public.
+`demo/live.html` is bring-your-own-key. The viewer pastes theirs, it is kept
+in that browser's `localStorage`, and it travels in the WebSocket URL to
+Google — browsers cannot set headers on a WebSocket handshake, so a query
+parameter is the only option. **Forget** clears it.
 
-Deployed, `functions/api/gemini-token.js` mints a token per session instead.
-`demo/live.js` asks for one on every Start, and falls back to the key field
-only if the endpoint is absent (404, static tree) or unconfigured (501, no
-`GEMINI_API_KEY`). So the deployment works without that secret — it just asks
-each visitor for their own key.
+There is no server in this path. The page is static files on a CDN; there is
+nowhere for a key to be sent even in principle, and no shared credential for
+a visitor to spend. The cost of a session lands on whoever opened it.
 
-Two things about ephemeral tokens that are easy to get wrong:
+A product would invert that: hold one key server-side and mint a short-lived
+token per session. Two things about those are easy to get wrong, and both cost
+an hour if you meet them cold:
 
 - They go in `access_token`, **not** `key`. An `AQ.…` token passed as `key`
   fails with *"Method doesn't allow unregistered callers"*, which reads like a
   revoked credential rather than a misnamed parameter.
-- `newSessionExpireTime` defaults to **one minute**, and the token is
-  single-use — it is for handing to a browser that is about to connect, not
-  for storing. Hence minting on the click rather than on page load.
+- `newSessionExpireTime` defaults to **one minute** and the token is
+  single-use. It is for handing to a browser that is about to connect, not for
+  storing — so mint on the click, not on page load.
 
 Confusingly, a current Google AI Studio API key *also* starts with `AQ.`. That
 one is long-lived and goes in `key`. The prefix does not tell you which you
-are holding; only which parameter it authenticates in does.
+are holding.

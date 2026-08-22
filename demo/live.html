@@ -17,9 +17,14 @@
     </header>
 
     <div class="controls">
-      <input id="key" class="field" type="password" placeholder="Gemini API key" autocomplete="off" spellcheck="false">
+      <input id="key" class="field" type="password" placeholder="Gemini API key"
+             autocomplete="off" spellcheck="false" aria-label="Gemini API key">
+      <button id="forget" class="btn" title="Remove the key from this browser">Forget</button>
       <button id="start" class="btn primary">Start</button>
     </div>
+    <p class="hint">Bring your own key. It is kept in this browser and sent only to
+      Google — this page has no server to send it to.
+      <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener">Get one</a>.</p>
 
     <div class="status">
       <span id="dot" class="dot"></span>

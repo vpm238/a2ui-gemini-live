@@ -180,12 +180,30 @@ test('the live page comes up and asks for a key rather than throwing', async () 
   assert.deepEqual(problems, [], `console errors:\n${problems.join('\n')}`);
   assert.equal(await page.textContent('#state'), 'not connected');
 
-  // There is no Pages Function in front of this static server, so
-  // /api/gemini-token 404s and the page must fall back to asking for a key
-  // rather than failing obscurely.
+  // Bring-your-own-key: pressing Start with an empty field must say so and
+  // stay put, not open a socket and fail obscurely a few seconds later.
   await page.click('#start');
   await page.waitForSelector('#notice:not([hidden])');
   assert.match(await page.textContent('#notice'), /Gemini API key/);
-  assert.equal(await page.textContent('#state'), 'failed');
+  assert.equal(await page.textContent('#state'), 'not connected');
+  assert.equal(await page.locator('#key').evaluate((el) => el === document.activeElement), true);
+  await page.close();
+});
+
+test('the key is kept in this browser and Forget removes it', async () => {
+  const { page } = await open('/demo/live.html');
+
+  await page.fill('#key', 'AIza-not-a-real-key');
+  await page.click('#start');           // stores it, then fails to connect
+  assert.equal(await page.evaluate(() => localStorage.getItem('gemini-key')), 'AIza-not-a-real-key');
+
+  await page.click('#forget');
+  assert.equal(await page.evaluate(() => localStorage.getItem('gemini-key')), null);
+  assert.equal(await page.inputValue('#key'), '');
+  assert.match(await page.textContent('#notice'), /removed from this browser/);
+
+  // A reload must not resurrect it.
+  await page.reload({ waitUntil: 'networkidle' });
+  assert.equal(await page.inputValue('#key'), '');
   await page.close();
 });

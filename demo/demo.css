@@ -62,6 +62,9 @@ button { font: inherit; color: inherit; }
 
 .controls { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-bottom: 14px; }
 
+.hint { margin: -8px 0 16px; font-size: 12px; line-height: 1.55; color: var(--ink-3); }
+.hint a { color: var(--voice); }
+
 .btn {
   border: 1px solid var(--rule); background: var(--panel-2);
   border-radius: 8px; padding: 8px 14px; cursor: pointer;
