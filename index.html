@@ -1,0 +1,87 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>A2UI Express</title>
+<link rel="icon" href="data:,">
+<link rel="stylesheet" href="demo/demo.css">
+<style>
+  body { display: block; }
+  .wrap { max-width: 760px; margin: 0 auto; padding: 72px 24px 90px; }
+  h1 { font-family: var(--mono); font-size: 25px; font-weight: 500; margin: 0 0 12px; }
+  .tagline { font-size: 19px; color: var(--ink-2); line-height: 1.5; margin: 0 0 22px; max-width: 56ch; }
+  pre.sample {
+    background: var(--panel); border: 1px solid var(--rule); border-left: 2px solid var(--visual);
+    border-radius: 9px; padding: 14px 16px; font-size: 12.5px; line-height: 1.6;
+    color: var(--ink-2); overflow-x: auto; margin: 0 0 22px;
+  }
+  .sub { color: var(--ink-3); font-size: 15px; margin: 0 0 40px; max-width: 62ch; line-height: 1.6; }
+  .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(270px, 1fr)); gap: 15px; }
+  .card {
+    display: block; text-decoration: none; color: inherit;
+    background: var(--panel); border: 1px solid var(--rule);
+    border-radius: 12px; padding: 20px 20px 22px; transition: border-color 0.12s ease;
+  }
+  .card:hover { border-color: var(--voice); }
+  .card h2 { font-size: 16px; margin: 0 0 5px; }
+  .card .kicker {
+    font-family: var(--mono); font-size: 10.5px; letter-spacing: 0.1em;
+    text-transform: uppercase; margin: 0 0 11px;
+  }
+  .k-live { color: var(--voice); }
+  .k-scripted { color: var(--visual); }
+  .card p { margin: 0; font-size: 14px; color: var(--ink-2); line-height: 1.5; }
+  .reading { margin-top: 42px; padding-top: 24px; border-top: 1px solid var(--rule); }
+  .reading h3 {
+    font-family: var(--mono); font-size: 11px; letter-spacing: 0.1em;
+    text-transform: uppercase; color: var(--ink-3); margin: 0 0 13px; font-weight: 500;
+  }
+  .reading ul { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 9px; }
+  .reading a { color: var(--voice); text-decoration: none; }
+  .reading a:hover { text-decoration: underline; }
+  .reading span { color: var(--ink-3); font-size: 14px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>A2UI Express</h1>
+  <p class="tagline">Gemini Live talks and draws in the same turn — because the
+    drawing is a function call, and the function call is a language small enough to say.</p>
+
+<pre class="sample">cards pick_flight
+- TAP Air Portugal | 06:15–09:05 | EUR 189 | direct
+- easyJet | 11:40–14:25 | EUR 212 | direct
+- Ryanair | 19:05–21:50 | EUR 244 | 1 stop</pre>
+
+  <p class="sub">That is the whole payload the model writes. A transpiler turns it
+    into A2UI v1.0 — surface, components, data model, bindings, action descriptors,
+    ids — and hands back a one-paragraph briefing about what is now on screen.
+    The model never sees a brace.</p>
+
+  <div class="cards">
+    <a class="card" href="demo/live.html">
+      <p class="kicker k-live">Live · needs a Gemini key</p>
+      <h2>Talk to it</h2>
+      <p>A real Gemini Live session. Native audio both ways, so interrupting it
+         actually stops it.</p>
+    </a>
+    <a class="card" href="demo/offline.html">
+      <p class="kicker k-scripted">Scripted · no key</p>
+      <h2>Read the wire</h2>
+      <p>The same turn on rails, through the same parser, transpiler and gates.
+         Includes the render that gets rejected.</p>
+    </a>
+  </div>
+
+  <div class="reading">
+    <h3>Reading</h3>
+    <ul>
+      <li><a href="README.md">README</a> <span>— why a shorthand, and what is verified</span></li>
+      <li><a href="docs/EXPRESS.md">EXPRESS.md</a> <span>— the grammar, and what it deliberately lacks</span></li>
+      <li><a href="docs/GATES.md">GATES.md</a> <span>— the modality gates when the model owns the microphone</span></li>
+    </ul>
+  </div>
+</div>
+</body>
+</html>

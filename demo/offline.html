@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>A2UI Express · scripted</title>
+<link rel="icon" href="data:,">
+<link rel="stylesheet" href="demo.css">
+</head>
+<body>
+<div class="app">
+
+  <section class="col">
+    <header>
+      <h2>Conversation</h2>
+      <p>A scripted turn-by-turn, no API key. Everything below the transcript
+         — parser, transpiler, gates, renderer — is the live code path.</p>
+    </header>
+
+    <div class="controls">
+      <button id="step" class="btn primary">Next</button>
+      <button id="play" class="btn">Play all</button>
+      <button id="reset" class="btn">Reset</button>
+    </div>
+
+    <div class="status">
+      <span id="dot" class="dot"></span>
+      <span id="state">ready</span>
+      <span class="meter"><i id="level"></i></span>
+    </div>
+
+    <div id="notice" class="notice" hidden></div>
+    <div id="turns" class="turns"></div>
+  </section>
+
+  <section class="col">
+    <header>
+      <h2>Screen</h2>
+      <p>Tap a card. It selects locally and emits the same action a spoken
+         “the second one” would.</p>
+    </header>
+    <div id="screen" class="screen"></div>
+  </section>
+
+  <section class="col">
+    <header>
+      <h2>The wire</h2>
+      <p>What the model wrote, what the transpiler made of it, and what went
+         back before it spoke again.</p>
+    </header>
+    <div id="wire"></div>
+  </section>
+
+</div>
+<script type="module" src="offline.js"></script>
+</body>
+</html>

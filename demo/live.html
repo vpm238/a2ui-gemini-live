@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>A2UI Express · Gemini Live</title>
+<link rel="icon" href="data:,">
+<link rel="stylesheet" href="demo.css">
+</head>
+<body>
+<div class="app">
+
+  <section class="col">
+    <header>
+      <h2>Conversation</h2>
+      <p>Gemini Live holds the microphone and the speaker. Interrupt it — it stops.</p>
+    </header>
+
+    <div class="controls">
+      <input id="key" class="field" type="password" placeholder="Gemini API key" autocomplete="off" spellcheck="false">
+      <button id="start" class="btn primary">Start</button>
+    </div>
+
+    <div class="status">
+      <span id="dot" class="dot"></span>
+      <span id="state">not connected</span>
+      <span class="meter"><i id="level"></i></span>
+    </div>
+
+    <div id="notice" class="notice" hidden></div>
+
+    <div class="controls">
+      <input id="say" class="field" type="text" placeholder="…or type instead of talking" disabled>
+      <button id="send" class="btn" disabled>Send</button>
+    </div>
+
+    <div id="turns" class="turns"></div>
+  </section>
+
+  <section class="col">
+    <header>
+      <h2>Screen</h2>
+      <p>Rendered from the transpiled A2UI. Tapping a card and saying “the second
+         one” emit the identical action.</p>
+    </header>
+    <div id="screen" class="screen"></div>
+  </section>
+
+  <section class="col">
+    <header>
+      <h2>The wire</h2>
+      <p>What the model wrote, what the transpiler made of it, and what went
+         back to the model before it spoke again.</p>
+    </header>
+    <div id="wire"></div>
+  </section>
+
+</div>
+<script type="module" src="live.js"></script>
+</body>
+</html>

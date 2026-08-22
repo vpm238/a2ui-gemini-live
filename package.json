@@ -1,0 +1,19 @@
+{
+  "name": "a2ui-gemini-live",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "A shorthand a live-audio model can write while it is talking, and a transpiler that expands it into A2UI v1.0.",
+  "scripts": {
+    "test": "node --test 'test/express.test.mjs'",
+    "test:browser": "node --test 'test/browser.test.mjs'",
+    "test:live": "node --test 'test/live.test.mjs'",
+    "test:all": "node --test 'test/*.test.mjs'",
+    "serve": "npx http-server . -p 8080 -c-1"
+  },
+  "devDependencies": {
+    "https-proxy-agent": "^7.0.0",
+    "playwright": "^1.56.0",
+    "ws": "^8.18.0"
+  }
+}
