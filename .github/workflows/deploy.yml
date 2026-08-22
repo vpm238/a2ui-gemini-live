@@ -1,0 +1,98 @@
+name: Deploy to Cloudflare Pages
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: pages-deploy
+  cancel-in-progress: true
+
+env:
+  PROJECT: a2ui-gemini-live
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      # No network, no key: the parser, transpiler and gates only.
+      - name: Unit tests
+        run: node --test 'test/express.test.mjs'
+
+      # The one that catches an unresolvable import or a rule that swallows
+      # clicks — the class of bug that unit tests structurally cannot see.
+      - name: Browser tests
+        run: |
+          npm install --no-save playwright@1.56.1
+          npx playwright install --with-deps chromium
+          node --test 'test/browser.test.mjs'
+
+  deploy:
+    needs: test
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      deployments: write
+    steps:
+      - uses: actions/checkout@v4
+
+      # Fail fast and legibly. Without this, a missing secret surfaces as a
+      # wrangler error forty lines into an npm log, which reads like a broken
+      # workflow rather than a missing setup step.
+      - name: Check credentials
+        run: |
+          missing=0
+          [ -n "${{ secrets.CLOUDFLARE_API_TOKEN }}" ] || { echo "::error::CLOUDFLARE_API_TOKEN is not set"; missing=1; }
+          [ -n "${{ secrets.CLOUDFLARE_ACCOUNT_ID }}" ] || { echo "::error::CLOUDFLARE_ACCOUNT_ID is not set"; missing=1; }
+          if [ "$missing" = "1" ]; then
+            echo "::error::Add both under Settings → Secrets and variables → Actions."
+            echo "::error::The API token needs the 'Cloudflare Pages: Edit' permission."
+            exit 1
+          fi
+          if [ -z "${{ secrets.GEMINI_API_KEY }}" ]; then
+            echo "::warning::GEMINI_API_KEY is not set — /api/gemini-token will return 501"
+            echo "::warning::and the page will fall back to asking each visitor for their own key."
+          fi
+
+      # `pages deploy` does not create the project, it only fails with
+      # "Project not found". Creating it here keeps the whole deploy in one
+      # place instead of requiring a dashboard step before the first run.
+      # Idempotent: a second create errors and we carry on.
+      - name: Ensure the Pages project exists
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          npx --yes wrangler@3 pages project create "$PROJECT" \
+            --production-branch=main \
+            || echo "project already exists — continuing"
+
+      # The Function mints 60-second tokens so the deployed page never holds a
+      # long-lived key. Pushed from here rather than set in the dashboard, so
+      # rotating it is one secret update and a re-run.
+      - name: Set the Gemini key as a Pages secret
+        if: ${{ secrets.GEMINI_API_KEY != '' }}
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+        run: |
+          printf '%s' "$GEMINI_API_KEY" \
+            | npx --yes wrangler@3 pages secret put GEMINI_API_KEY --project-name="$PROJECT"
+
+      # The whole repo is the site. There is no build step: the demos import
+      # ../src/*.js as ES modules at runtime, so the deployed files ARE the
+      # source, which is the point — the wire pane is readable because the
+      # code behind it is too.
+      - name: Deploy
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          command: pages deploy . --project-name=a2ui-gemini-live --commit-dirty=true

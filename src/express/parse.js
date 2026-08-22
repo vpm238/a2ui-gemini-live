@@ -14,7 +14,7 @@
  * round trip to repair, not one per mistake.
  */
 
-import { grammarOf, keywords, SURFACE_KEYWORD, ACTION_RE } from './grammar.js';
+import { grammarOf, keywords, fieldList, SURFACE_KEYWORD, ACTION_RE } from './grammar.js';
 
 /**
  * @typedef {object} Node
@@ -57,11 +57,11 @@ export function parseExpress(source, catalog) {
         return;
       }
       const values = splitFields(body);
-      if (values.length !== last.spec.fields.length) {
+      if (!fits(values.length, last.spec)) {
         last.brokenItems += 1;
         fail(lineNo, text,
-          `expected ${last.spec.fields.length} fields, found ${values.length}`,
-          `\`${last.keyword}\` items are: ${last.spec.fields.join(' | ')}`);
+          `expected ${arity(last.spec)} fields, found ${values.length}`,
+          `\`${last.keyword}\` items are: ${fieldList(last.spec)}`);
         return;
       }
       if (values.some((v) => !v)) {
@@ -69,7 +69,7 @@ export function parseExpress(source, catalog) {
         fail(lineNo, text, 'a field is empty', 'every field between the pipes needs a value');
         return;
       }
-      last.items.push(Object.fromEntries(last.spec.fields.map((f, n) => [f, values[n]])));
+      last.items.push(collect(last.spec, values));
       return;
     }
 
@@ -136,16 +136,16 @@ export function parseExpress(source, catalog) {
     if (spec.list) {
       if (inline.length) {
         fail(lineNo, text, `\`${keyword}\` takes its values on following \`-\` lines`,
-          `- ${spec.fields.join(' | ')}`);
+          `- ${fieldList(spec)}`);
       }
     } else if (spec.fields.length) {
-      if (inline.length !== spec.fields.length) {
-        fail(lineNo, text, `expected ${spec.fields.length} fields after \`${keyword} ${spec.head.join(' ')}\`, found ${inline.length}`,
-          `\`${keyword} <${spec.head.join('> <')}> | ${spec.fields.join(' | ')}\``);
+      if (!fits(inline.length, spec)) {
+        fail(lineNo, text, `expected ${arity(spec)} fields after \`${keyword} ${spec.head.join(' ')}\`, found ${inline.length}`,
+          `\`${keyword} <${spec.head.join('> <')}> | ${fieldList(spec)}\``);
       } else if (inline.some((v) => !v)) {
         fail(lineNo, text, 'a field is empty', 'every field between the pipes needs a value');
       } else {
-        node.items.push(Object.fromEntries(spec.fields.map((f, n) => [f, inline[n]])));
+        node.items.push(collect(spec, inline));
       }
     }
 
@@ -160,7 +160,7 @@ export function parseExpress(source, catalog) {
     // and "…and now it is empty" is a consequence, not a second mistake.
     if (node.spec.list && !node.items.length && !node.brokenItems) {
       fail(node.line, `${node.keyword} …`, `\`${node.keyword}\` has no items`,
-        `add at least one \`- ${node.spec.fields.join(' | ')}\` line beneath it`);
+        `add at least one \`- ${fieldList(node.spec)}\` line beneath it`);
     }
   }
   if (!nodes.length && !errors.length) {
@@ -179,6 +179,16 @@ export function parseExpress(source, catalog) {
 
   return { surfaceId, nodes, errors };
 }
+
+/** Trailing optional fields may be left off, so arity is a range. */
+const fits = (n, spec) => n >= spec.required && n <= spec.fields.length;
+
+const arity = (spec) =>
+  (spec.required === spec.fields.length ? `${spec.required}` : `${spec.required}–${spec.fields.length}`);
+
+/** Fill left to right; whatever ran out stays absent rather than empty. */
+const collect = (spec, values) =>
+  Object.fromEntries(values.map((v, n) => [spec.fields[n], v]));
 
 /** Split on `|`, trim, and drop a trailing empty segment from `a | b |`. */
 function splitFields(text) {

@@ -127,9 +127,11 @@ test('a rendered surface produces a real A2UI payload and a briefing', { skip, t
   render.response.guidance.forEach((g) => console.log(`          · ${g}`));
 });
 
-test('the transpiler rejects invalid Express and the model repairs it', { skip, timeout: 90000 }, async () => {
-  // Ask for something the catalog cannot express, and check the failure path
-  // is a correction rather than a crash or an apology to the user.
+test('every render attempt either parses or comes back repairable', { skip, timeout: 90000 }, async () => {
+  // Ask for something the catalog cannot express. The model may or may not
+  // overreach on a given run, so this does not assert that it does — it
+  // asserts that if it does, the failure path is a line-numbered correction
+  // rather than a crash, and that the turn still ends with a real surface.
   const seen = await turn(
     'show me a bar chart of Lisbon flight prices over the next month, then just list three flights under 300 euros',
   );

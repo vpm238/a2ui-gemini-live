@@ -32,7 +32,7 @@ test('parses a list surface', () => {
   assert.deepEqual(ir.nodes.map((n) => n.component), ['Heading', 'OptionCards', 'Status']);
   assert.equal(ir.nodes[1].items.length, 3);
   assert.deepEqual(ir.nodes[1].items[1], {
-    title: 'easyJet', when: '11:40–14:25', price: 'EUR 212', tag: 'direct',
+    title: 'easyJet', detail: '11:40–14:25', price: 'EUR 212', tag: 'direct',
   });
 });
 
@@ -80,9 +80,31 @@ test('an unknown keyword names the ones that exist', () => {
 test('a wrong field count says what the fields are', () => {
   const { errors } = parseExpress('cards pick_flight\n- TAP | 06:15', catalog);
   assert.equal(errors.length, 1);
-  assert.match(errors[0].message, /expected 4 fields, found 2/);
-  assert.match(errors[0].hint, /title \| when \| price \| tag/);
+  assert.match(errors[0].message, /expected 3–4 fields, found 2/);
+  assert.match(errors[0].hint, /title \| detail \| price \| tag\?/);
   assert.equal(errors[0].line, 2);
+});
+
+test('a trailing optional field may be left off', () => {
+  // A live run wrote hotels through `cards`, which has no departure time —
+  // three fields where the grammar had demanded four. Fixed arity was wrong.
+  const ir = parseExpress(
+    'cards select_hotel\n- Browns Central | design focused | EUR 175', catalog);
+  assert.deepEqual(ir.errors, []);
+  assert.deepEqual(ir.nodes[0].items[0],
+    { title: 'Browns Central', detail: 'design focused', price: 'EUR 175' });
+  assert.equal('tag' in ir.nodes[0].items[0], false);
+});
+
+test('a required field may not be left off', () => {
+  const { errors } = parseExpress('cards x_y\n- Browns Central | design focused', catalog);
+  assert.match(errors[0].message, /expected 3–4 fields, found 2/);
+});
+
+test('optional fields must be declared last', () => {
+  const bent = structuredClone(catalog);
+  bent.components.OptionCards.express.fields = ['title', 'detail?', 'price', 'tag'];
+  assert.throws(() => parseExpress('heading Hi', bent), /optional fields must come last/);
 });
 
 test('an orphan item line is caught', () => {
@@ -272,7 +294,7 @@ test('the prompt is generated from the catalog, not hand-written', () => {
     if (!def.express) continue;
     assert.ok(text.includes(def.express.keyword), `prompt never mentions "${def.express.keyword}"`);
   }
-  assert.ok(text.includes('- title | when | price | tag'));
+  assert.ok(text.includes('- title | detail | price | tag?'));
   assert.ok(text.includes(catalog.examples[0].spoken));
 });
 

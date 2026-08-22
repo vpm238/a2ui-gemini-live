@@ -19,7 +19,7 @@ Two demos, one code path:
 
 | | |
 |---|---|
-| `demo/live.html` | a real Gemini Live session. Needs a Gemini API key. |
+| `demo/live.html` | a real Gemini Live session. Needs a key, or a deployment that mints tokens. |
 | `demo/offline.html` | the same turn scripted. No key, no microphone. |
 
 ---
@@ -103,7 +103,7 @@ That is an instruction, not a veto, and instructions get ignored. See
 ## Running it
 
 ```sh
-node --test 'test/express.test.mjs'   # 32 tests, no network
+node --test 'test/express.test.mjs'   # 35 tests, no network
 node --test 'test/browser.test.mjs'   # 8 tests, headless Chromium
 GEMINI_API_KEY=… node --test 'test/live.test.mjs'   # 4 tests, real model
 
@@ -113,7 +113,9 @@ npx http-server . -p 8080             # then open /demo/offline.html
 `test/live.test.mjs` is the only test that can be wrong about anything: it
 puts a real model in front of the generated prompt and asks whether a machine
 that has never seen A2UI Express can write it correctly. Currently it can —
-first attempt, no repair — and it renders while it is still talking.
+first attempt, no repair — and it renders while it is still talking. It has
+already earned its keep once: it caught `cards` demanding a departure time
+from a hotel, which no unit test of mine would ever have thought to try.
 
 Everything else is a closed loop and proves only internal consistency.
 
@@ -121,9 +123,10 @@ Everything else is a closed loop and proves only internal consistency.
 
 Verified against `models/gemini-3.1-flash-live-preview`:
 
-- audio out and a `render_surface` call in the same turn (23 chunks / 202 KB / 6.2 s)
+- audio out and a `render_surface` call in the same turn (21 chunks / 166 KB / 4.9 s)
 - Express written from the generated prompt alone, parsing on the first attempt
-- the repair loop: a rejected render followed by an accepted one, same turn
+- every render attempt either parsing or returning line-numbered errors; when
+  the model does overreach, it repairs inside the same turn
 - the briefing reaching the model before it speaks again
 
 Verified in headless Chromium against the scripted demo: the module graph, the
@@ -139,12 +142,45 @@ scheduled playback, barge-in — is therefore the least-tested code here.
 **Also not real:** there is no booking backend. The model invents plausible
 flights anchored on the catalog's examples.
 
-## The key
+## Deploying
 
-`demo/live.html` keeps the key in `localStorage` and sends it in the WebSocket
-URL, because browsers cannot set headers on a WebSocket handshake. That is
-fine for a local demo and wrong for anything deployed — a deployed version
-should mint a short-lived token server-side. Note that an ephemeral token
-(`AQ.…`, from `POST /v1beta/auth_tokens`) must be passed as `access_token`,
-not `key`, and its `newSessionExpireTime` defaults to **one minute** — it is
-for handing to a browser that is about to connect, not for storing.
+Pushing to `main` runs the tests and, if they pass, deploys the whole repo to
+Cloudflare Pages. There is no build step — the demos import `../src/*.js` as
+ES modules at runtime, so the deployed files *are* the source.
+
+Three secrets under **Settings → Secrets and variables → Actions**:
+
+| secret | |
+|---|---|
+| `CLOUDFLARE_API_TOKEN` | needs the **Cloudflare Pages: Edit** permission |
+| `CLOUDFLARE_ACCOUNT_ID` | right-hand sidebar of any Cloudflare dashboard page |
+| `GEMINI_API_KEY` | optional — see below |
+
+The workflow creates the Pages project if it does not exist, pushes
+`GEMINI_API_KEY` through to the Function as a Pages secret, and deploys.
+Rotating the key is one secret update and a re-run.
+
+## The key, and why the deployed page does not hold one
+
+Browsers cannot set headers on a WebSocket handshake, so the credential has to
+ride in the query string. Locally that is a key pasted into the page and kept
+in `localStorage` — fine for a demo, wrong for anything public.
+
+Deployed, `functions/api/gemini-token.js` mints a token per session instead.
+`demo/live.js` asks for one on every Start, and falls back to the key field
+only if the endpoint is absent (404, static tree) or unconfigured (501, no
+`GEMINI_API_KEY`). So the deployment works without that secret — it just asks
+each visitor for their own key.
+
+Two things about ephemeral tokens that are easy to get wrong:
+
+- They go in `access_token`, **not** `key`. An `AQ.…` token passed as `key`
+  fails with *"Method doesn't allow unregistered callers"*, which reads like a
+  revoked credential rather than a misnamed parameter.
+- `newSessionExpireTime` defaults to **one minute**, and the token is
+  single-use — it is for handing to a browser that is about to connect, not
+  for storing. Hence minting on the click rather than on page load.
+
+Confusingly, a current Google AI Studio API key *also* starts with `AQ.`. That
+one is long-lived and goes in `key`. The prefix does not tell you which you
+are holding; only which parameter it authenticates in does.

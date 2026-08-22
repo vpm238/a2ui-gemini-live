@@ -15,8 +15,12 @@ import { test, before, after } from 'node:test';
 import assert from 'node:assert/strict';
 import { createServer } from 'node:http';
 import { readFile } from 'node:fs/promises';
+import { existsSync } from 'node:fs';
 import { extname, join, normalize } from 'node:path';
 import { chromium } from 'playwright';
+
+/** This image ships a Chromium here; a CI runner has Playwright's own. */
+const SANDBOX_CHROMIUM = '/opt/pw-browsers/chromium';
 
 const ROOT = new URL('..', import.meta.url).pathname;
 const TYPES = {
@@ -41,7 +45,9 @@ before(async () => {
   });
   await new Promise((r) => server.listen(0, '127.0.0.1', r));
   origin = `http://127.0.0.1:${server.address().port}`;
-  browser = await chromium.launch({ executablePath: '/opt/pw-browsers/chromium' });
+  browser = await chromium.launch(
+    existsSync(SANDBOX_CHROMIUM) ? { executablePath: SANDBOX_CHROMIUM } : {},
+  );
 });
 
 after(async () => {
@@ -174,7 +180,12 @@ test('the live page comes up and asks for a key rather than throwing', async () 
   assert.deepEqual(problems, [], `console errors:\n${problems.join('\n')}`);
   assert.equal(await page.textContent('#state'), 'not connected');
 
+  // There is no Pages Function in front of this static server, so
+  // /api/gemini-token 404s and the page must fall back to asking for a key
+  // rather than failing obscurely.
   await page.click('#start');
+  await page.waitForSelector('#notice:not([hidden])');
   assert.match(await page.textContent('#notice'), /Gemini API key/);
+  assert.equal(await page.textContent('#state'), 'failed');
   await page.close();
 });

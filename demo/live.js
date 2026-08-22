@@ -38,10 +38,6 @@ ui.key.value = localStorage.getItem('gemini-key') ?? '';
 ui.start.addEventListener('click', async () => {
   if (live) return teardown('stopped');
 
-  const apiKey = ui.key.value.trim();
-  if (!apiKey) return panes.warn('Paste a Gemini API key first. It stays in this browser.');
-  localStorage.setItem('gemini-key', apiKey);
-
   panes.warn(null);
   panes.setState('connecting…', 'busy');
   ui.start.disabled = true;
@@ -51,7 +47,7 @@ ui.start.addEventListener('click', async () => {
     // the model ends up talking to a muted speaker.
     await player.prime();
 
-    live = new GeminiLive({ apiKey, catalog, session: panes.session });
+    live = new GeminiLive({ ...await credential(), catalog, session: panes.session });
     wire(live);
     await live.connect();
 
@@ -73,6 +69,39 @@ ui.start.addEventListener('click', async () => {
     ui.start.disabled = false;
   }
 });
+
+/**
+ * Prefer a token the server minted; fall back to a key typed into the page.
+ *
+ * Minting happens here, on the click, and not a moment earlier: an ephemeral
+ * token's `newSessionExpireTime` is one minute, and it is single-use. A token
+ * fetched on page load is usually dead by the time anyone presses Start.
+ */
+async function credential() {
+  const token = await mintToken();
+  if (token) {
+    ui.key.value = '';
+    ui.key.disabled = true;
+    ui.key.placeholder = 'using a token minted by this server';
+    return { token };
+  }
+
+  const apiKey = ui.key.value.trim();
+  if (!apiKey) throw new Error('NO_CREDENTIAL');
+  localStorage.setItem('gemini-key', apiKey);
+  return { apiKey };
+}
+
+/** Absent when running from a file:// tree or a deployment with no secret. */
+async function mintToken() {
+  try {
+    const res = await fetch('/api/gemini-token', { method: 'POST' });
+    if (!res.ok) return null; // 404 = no Function, 501 = no GEMINI_API_KEY
+    return (await res.json())?.token ?? null;
+  } catch {
+    return null;
+  }
+}
 
 function wire(l) {
   l.on('audio', ({ base64 }) => player.play(base64));
@@ -121,6 +150,9 @@ panes.setState('not connected');
 
 function explain(err) {
   const m = String(err?.message ?? err);
+  if (m === 'NO_CREDENTIAL') {
+    return 'This deployment mints no token, so paste a Gemini API key. It stays in this browser.';
+  }
   if (/API key not valid|API_KEY_INVALID/i.test(m)) return 'That API key was rejected by Google.';
   if (/unregistered callers/i.test(m)) return 'No credential reached Google — check the key.';
   if (/not found for API version|not supported for bidi/i.test(m)) {

@@ -22,6 +22,8 @@ const SYNTAX = `A2UI Express is line-oriented. One component per line.
   * "|" separates fields. Whitespace around it is ignored.
   * A blank line, or a line starting with "#", is ignored.
   * Nothing nests and nothing is quoted. There are no brackets to balance.
+  * A field written "name?" below is optional and may be left off the END of
+    a line. Fields fill left to right, so one cannot be skipped in the middle.
   * Optionally begin with "surface <name>" to name the surface.
 
 Write plain text in fields — no markup, no quotes, no currency symbols that

@@ -3,74 +3,123 @@
   "protocolVersion": "v1.0",
   "title": "Travel concierge catalog",
   "description": "The components a travel agent may render. Each one declares three things: how it is written in A2UI Express, what the transpiler must emit for it, and its modality gates. The grammar handed to the model is generated from this file — so a component that isn't here has no syntax, and a line that names it cannot parse.",
-
   "instructions": "Surfaces are summoned by a conversation and dismissed by it. Render one decision, never a page. Do not render a surface that only repeats what you just said — if it fits in a sentence, it is a sentence. Reach for a surface when there are more than three things to compare, when the user must verify something you cannot summarise, when a value needs precision, or when a commit is irreversible.",
-
   "components": {
     "Column": {
       "description": "Vertical stack. Every surface has exactly one Column with id 'root'. Never written in Express — the transpiler creates it.",
       "express": null
     },
-
     "Heading": {
       "description": "A short label above a list. Two or three words plus context. Never a sentence.",
-      "express": { "keyword": "heading", "head": ["text"] },
-      "speech": { "announce": "{text}" }
+      "express": {
+        "keyword": "heading",
+        "head": [
+          "text"
+        ]
+      },
+      "speech": {
+        "announce": "{text}"
+      }
     },
-
     "OptionCards": {
-      "description": "The workhorse: selectable cards for flights, hotels, times. The user picks one by tapping or by saying 'the second one'.",
+      "description": "The workhorse: selectable cards for flights, hotels, times. `detail` is whatever distinguishes them — departure and arrival times for a flight, a neighbourhood for a hotel. The user picks one by tapping or by saying 'the second one'.",
       "express": {
         "keyword": "cards",
-        "head": ["action"],
+        "head": [
+          "action"
+        ],
         "list": true,
-        "fields": ["title", "when", "price", "tag"]
+        "fields": [
+          "title",
+          "detail",
+          "price",
+          "tag?"
+        ]
       },
-      "speech": { "item": "{title}, {when}, {price}" },
-      "modality": { "requiresVisual": false, "stakes": "none", "spokenSensitive": false }
+      "speech": {
+        "item": "{title}, {detail}, {price}"
+      },
+      "modality": {
+        "requiresVisual": false,
+        "stakes": "none",
+        "spokenSensitive": false
+      }
     },
-
     "SeatMap": {
       "description": "A cabin layout. Speech cannot carry a seat map — a spoken description would be invented detail the traveller then acts on.",
       "express": {
         "keyword": "seatmap",
-        "head": ["action"],
+        "head": [
+          "action"
+        ],
         "list": true,
-        "fields": ["seat", "kind", "fee"]
+        "fields": [
+          "seat",
+          "kind",
+          "fee?"
+        ]
       },
-      "speech": { "item": "{seat}, {kind}" },
-      "modality": { "requiresVisual": true, "stakes": "none", "spokenSensitive": false }
+      "speech": {
+        "item": "{seat}, {kind}"
+      },
+      "modality": {
+        "requiresVisual": true,
+        "stakes": "none",
+        "spokenSensitive": false
+      }
     },
-
     "PaymentConfirm": {
       "description": "Money leaves the account when this is confirmed. Use for the final booking step only.",
       "express": {
         "keyword": "confirm",
-        "head": ["action"],
-        "fields": ["summary", "amount", "method"]
+        "head": [
+          "action"
+        ],
+        "fields": [
+          "summary",
+          "amount",
+          "method"
+        ]
       },
-      "speech": { "readback": "{summary}, {amount}" },
-      "modality": { "requiresVisual": false, "stakes": "readback", "spokenSensitive": false }
+      "speech": {
+        "readback": "{summary}, {amount}"
+      },
+      "modality": {
+        "requiresVisual": false,
+        "stakes": "readback",
+        "spokenSensitive": false
+      }
     },
-
     "SensitiveList": {
       "description": "Passport numbers, card digits, frequent-flyer numbers, home address. Renders in full on screen and is never spoken aloud.",
       "express": {
         "keyword": "private",
         "head": [],
         "list": true,
-        "fields": ["label", "value"]
+        "fields": [
+          "label",
+          "value"
+        ]
       },
-      "modality": { "requiresVisual": false, "stakes": "none", "spokenSensitive": true }
+      "modality": {
+        "requiresVisual": false,
+        "stakes": "none",
+        "spokenSensitive": true
+      }
     },
-
     "Status": {
       "description": "A live line that changes after you have stopped talking — 'seat 14C held', 'gate posted'. Never use it to repeat something you already said.",
-      "express": { "keyword": "note", "head": ["text"] },
-      "speech": { "announce": "{text}" }
+      "express": {
+        "keyword": "note",
+        "head": [
+          "text"
+        ]
+      },
+      "speech": {
+        "announce": "{text}"
+      }
     }
   },
-
   "examples": [
     {
       "spoken": "Three come in under three hundred — the cheapest is the early one out.",

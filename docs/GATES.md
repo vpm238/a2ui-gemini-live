@@ -99,7 +99,7 @@ silent by default, and becomes speakable only by being named. That is the
 right direction for a default to fall.
 
 The same mechanism keeps `speech.item` honest: the numbering in the briefing
-uses `{title}, {when}, {price}` and never mentions `tag`, so a field can exist
+uses `{title}, {detail}, {price}` and never mentions `tag`, so a field can exist
 on screen without entering the spoken channel at all. `test/express.test.mjs`
 asserts both, and asserts that a `spokenSensitive` list is never enumerated in
 a briefing even once — the values do not reach the model's context, so they

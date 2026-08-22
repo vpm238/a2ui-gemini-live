@@ -44,7 +44,7 @@ Nowhere in this document. They come from the catalog:
     "keyword": "cards",
     "head": ["action"],
     "list": true,
-    "fields": ["title", "when", "price", "tag"]
+    "fields": ["title", "detail", "price", "tag?"]
   }
 }
 ```
@@ -72,6 +72,17 @@ The words after the keyword, before any pipe.
 - `list: true` — values arrive on `-` lines beneath. Zero items is an error.
 - `list` absent — values arrive inline after the head, pipe-separated, and
   become properties of the component.
+- A trailing `?` marks a field optional. Optional fields must be declared
+  last, and the catalog is rejected at load time if they are not: values fill
+  left to right, so an optional field in the middle would make position
+  ambiguous — three values against `title | when? | price` could mean either
+  reading, and the parser would have to guess.
+
+That last rule is not hypothetical. `cards` originally required exactly four
+fields, modelled on a flight — `title | when | price | tag`. The first live
+run that asked for hotels wrote three, because a hotel has no departure time,
+and every line was rejected. Fixed arity had encoded one use case into a
+component meant to be general. `when` is now `detail` and `tag` is optional.
 
 ## What the transpiler adds
 
@@ -102,7 +113,7 @@ carries a line number, what was wrong, and what to do:
 line 2: "chart" is not a component in this catalog
         — available: heading, cards, seatmap, confirm, private, note
 line 4: expected 4 fields, found 2
-        — `cards` items are: title | when | price | tag
+        — `cards` items are: title | detail | price | tag?
 ```
 
 All of them go back in one tool response, so a repair costs one round trip

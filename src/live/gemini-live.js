@@ -43,7 +43,8 @@ export class GeminiLive {
 
   /**
    * @param {object} options
-   * @param {string} options.apiKey
+   * @param {string} [options.apiKey]  a long-lived API key. Local use only.
+   * @param {string} [options.token]   an ephemeral token from /api/gemini-token. Preferred.
    * @param {object} options.catalog
    * @param {import('../session.js').Session} options.session  handles the tool calls
    * @param {string} [options.model]
@@ -52,18 +53,30 @@ export class GeminiLive {
    * @param {object} [options.socketOptions]            for Node (proxy agent)
    */
   constructor({
-    apiKey, catalog, session,
+    apiKey, token, catalog, session,
     model = LIVE_MODELS[0],
     voice = null,
     WebSocketImpl = globalThis.WebSocket,
     socketOptions = undefined,
   }) {
-    if (!apiKey) throw new Error('GeminiLive needs an API key');
+    if (!apiKey && !token) throw new Error('GeminiLive needs an apiKey or a token');
     if (!catalog) throw new Error('GeminiLive needs a catalog');
     if (!session) throw new Error('GeminiLive needs a Session to answer tool calls');
     if (!WebSocketImpl) throw new Error('no WebSocket available — pass WebSocketImpl');
 
-    Object.assign(this, { apiKey, catalog, session, model, voice, WebSocketImpl, socketOptions });
+    Object.assign(this, { apiKey, token, catalog, session, model, voice, WebSocketImpl, socketOptions });
+  }
+
+  /**
+   * Ephemeral tokens and API keys travel in DIFFERENT query parameters, and
+   * mixing them up costs an hour: an `AQ.…` token passed as `key` fails with
+   * "Method doesn't allow unregistered callers", which reads like a revoked
+   * credential rather than a misnamed parameter.
+   */
+  get credential() {
+    return this.token
+      ? `access_token=${encodeURIComponent(this.token)}`
+      : `key=${encodeURIComponent(this.apiKey)}`;
   }
 
   on(event, fn) {
@@ -82,10 +95,10 @@ export class GeminiLive {
     if (this.#ready) return this.#ready;
 
     this.#ready = new Promise((resolve, reject) => {
-      // The key rides in the query string because browsers cannot set headers
-      // on a WebSocket handshake. In production this should be a short-lived
+      // The credential rides in the query string because browsers cannot set
+      // headers on a WebSocket handshake. Deployed, it should be a short-lived
       // token minted server-side — see functions/api/gemini-token.js.
-      const url = `${LIVE_URL}?key=${encodeURIComponent(this.apiKey)}`;
+      const url = `${LIVE_URL}?${this.credential}`;
       const ws = this.socketOptions
         ? new this.WebSocketImpl(url, this.socketOptions)
         : new this.WebSocketImpl(url);
