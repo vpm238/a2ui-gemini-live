@@ -76,13 +76,21 @@ jobs:
       # The Function mints 60-second tokens so the deployed page never holds a
       # long-lived key. Pushed from here rather than set in the dashboard, so
       # rotating it is one secret update and a re-run.
+      #
+      # The skip is a shell test rather than an `if:`, because the `secrets`
+      # context is not available in step conditions — GitHub rejects the whole
+      # workflow at parse time, which surfaces as a run with zero jobs and no
+      # logs to read.
       - name: Set the Gemini key as a Pages secret
-        if: ${{ secrets.GEMINI_API_KEY != '' }}
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
         run: |
+          if [ -z "$GEMINI_API_KEY" ]; then
+            echo "GEMINI_API_KEY not set — the page will ask each visitor for a key"
+            exit 0
+          fi
           printf '%s' "$GEMINI_API_KEY" \
             | npx --yes wrangler@3 pages secret put GEMINI_API_KEY --project-name="$PROJECT"
 
